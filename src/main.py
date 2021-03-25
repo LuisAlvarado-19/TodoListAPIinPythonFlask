@@ -8,7 +8,7 @@ from flask_swagger import swagger
 from flask_cors import CORS
 from utils import APIException, generate_sitemap
 from admin import setup_admin
-from models import db, User
+from models import db, User, Todos
 #from models import Person
 
 app = Flask(__name__)
@@ -20,12 +20,12 @@ db.init_app(app)
 CORS(app)
 setup_admin(app)
 
-# Handle/serialize errors like a JSON object
+
 @app.errorhandler(APIException)
 def handle_invalid_usage(error):
     return jsonify(error.to_dict()), error.status_code
 
-# generate sitemap with all your endpoints
+
 @app.route('/')
 def sitemap():
     return generate_sitemap(app)
@@ -39,7 +39,44 @@ def handle_hello():
 
     return jsonify(response_body), 200
 
-# this only runs if `$ python src/main.py` is executed
+@app.route('/get_todos', methods=['GET'])
+def get_tod():
+
+   
+    query = Todos.query.all()
+
+   
+    results = list(map(lambda x: x.serialize(), query))
+
+    return jsonify(results), 200
+
+@app.route('/add_todos', methods=['POST'])
+def add_tod():
+
+    
+    request_body = request.get_json()
+    print(request_body)
+
+
+    tod = Todos(done=request_body["done"], label=request_body["label"])
+    db.session.add(tod)
+    db.session.commit()
+
+    return jsonify("All good"), 200
+
+@app.route('/del_todos/<int:tid>', methods=['DELETE'])
+def del_tod(tid):
+
+    
+    tod = Todos.query.get(tid)
+    if tod is None:
+        raise APIException('Label not found', status_code=404)
+
+    db.session.delete(tod)
+    db.session.commit()
+
+    return jsonify("All good"), 200
+
 if __name__ == '__main__':
     PORT = int(os.environ.get('PORT', 3000))
     app.run(host='0.0.0.0', port=PORT, debug=False)
